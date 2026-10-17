@@ -64,7 +64,7 @@ pnpm test
 pnpm build
 ```
 
-Tests automatisés : calendrier, historique, baisse de volume après absence, adaptation au volume récent, affûtage, conservation des statuts, signature OAuth et rejet de cookie falsifié.
+Tests automatisés : ancrage stable lors des recalculs quotidiens, calendrier, historique, baisse de volume après absence, adaptation au volume récent, affûtage, conservation des statuts, signature OAuth et rejet de cookie falsifié.
 
 Recette avec secrets réels (à effectuer après configuration) :
 

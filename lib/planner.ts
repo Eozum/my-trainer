@@ -23,7 +23,8 @@ export function generate(state:State,today=day()) {
  if(date===race.date){sessions.push({id:date,date,kind:"Course cible",km:race.distance,minutes:race.targetMinutes,elevation:race.elevation,note:"Départ prudent, gestion à l’effort.",status:"planned"});continue;}
  const weekday=(new Date(date+"T12:00:00Z").getUTCDay()+6)%7;
  if(!slots.includes(weekday))continue;
- const week=Math.floor(i/7), remaining=days-i;
+ const anchor=state.planStart??today;
+ const week=Math.max(0,Math.floor((Date.parse(date)-Date.parse(anchor))/604800000)), remaining=days-i;
  const taper=remaining<=7?.5:remaining<=14?.75:1;
  const goalFactor=race.goal==="finish"?.9:1;
  const volume=base*factor*goalFactor*Math.pow(1.05,Math.min(week,8))*(week%4===3?.8:1)*taper;
