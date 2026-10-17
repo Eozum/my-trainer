@@ -1,3 +1,17 @@
-import {authenticated,failure} from "@/lib/server";import {vault,decrypt,encrypt} from "@/lib/vault";import {activities,exchange,tokenSchema} from "@/lib/strava";
-export const maxDuration=60;
-export async function POST(req:Request){try{const {user}=await authenticated(req),db=vault();const {data,error}=await db.from("strava_connections").select("encrypted_tokens").eq("user_id",user.id).maybeSingle();if(error)throw error;if(!data)return Response.json({error:"Connectez Strava avant l’import."},{status:409});let tokens=tokenSchema.parse(decrypt(data.encrypted_tokens));if(tokens.expires_at<Date.now()/1000+120){tokens=await exchange({grant_type:"refresh_token",refresh_token:tokens.refresh_token});const {error}=await db.from("strava_connections").update({encrypted_tokens:encrypt(tokens),updated_at:new Date().toISOString()}).eq("user_id",user.id);if(error)throw error;}return Response.json({activities:await activities(tokens.access_token)},{headers:{"Cache-Control":"no-store"}});}catch(e){return failure(e);}}
+import { readTokens, saveTokens, requireOrigin } from "@/lib/browser-strava";
+import { activities, exchange } from "@/lib/strava";
+export const maxDuration = 60;
+export async function POST(req: Request) { try {
+    requireOrigin(req);
+    let tokens = await readTokens();
+    if (!tokens)
+        return Response.json({ error: "Connectez Strava avant l’import." }, { status: 409 });
+    if (tokens.expires_at < Date.now() / 1000 + 120) {
+        tokens = await exchange({ grant_type: "refresh_token", refresh_token: tokens.refresh_token });
+        await saveTokens(tokens);
+    }
+    return Response.json({ activities: await activities(tokens.access_token) }, { headers: { "Cache-Control": "no-store" } });
+}
+catch {
+    return Response.json({ error: "Import Strava impossible. Réessayez ou reconnectez Strava." }, { status: 400 });
+} }

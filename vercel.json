@@ -1,1 +1,1 @@
-{"framework":"nextjs","regions":["cdg1"],"crons":[{"path":"/api/cron/adapt","schedule":"0 4 * * *"}]}
+{}
