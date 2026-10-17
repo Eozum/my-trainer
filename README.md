@@ -1,82 +1,47 @@
-# Stride · my-trainer
+# EoTrainer
 
-MVP de planification de course à pied en français. Next.js App Router, fonctions serverless Vercel, authentification Supabase par email/mot de passe, PostgreSQL et Row Level Security.
+Un carnet de course personnel : une course à préparer, les séances de la semaine et les sorties réalisées. Sans inscription ni compte dans l’application.
 
 ## Démarrer
 
-Node 24 et pnpm 11.25.0 (Corepack ou installation pnpm).
+Node 24 et pnpm 11.25.0.
 
 ```sh
 pnpm install --frozen-lockfile
-cp .env.example .env.local
 pnpm dev
 ```
 
-Sans variables, le tableau de bord fonctionne en démonstration en mémoire. Aucune donnée réelle Garmin n’est fournie. Les modifications disparaissent au rechargement. La création de compte et les API privées exigent Supabase.
+Le programme et l’import JSON fonctionnent sans configuration serveur. La course et l’historique sont enregistrés dans le stockage local du navigateur. Il n’y a pas de sauvegarde cloud, de transfert entre appareils ni de tâche en arrière-plan. Le programme est recalculé à l’ouverture et à chaque modification/import. Effacer le stockage du navigateur efface le carnet. En navigation privée, il peut disparaître à la fermeture.
 
-## Déployer sur Vercel via GitHub
+## Connecter Strava (facultatif)
 
-1. Créer un projet Supabase dans la région souhaitée ; exécuter `supabase/schema.sql` dans l’éditeur SQL, une seule fois.
-2. Activer Email dans Authentication / Providers. Garder la confirmation email activée ; définir Site URL sur le domaine Vercel final. Configurer SMTP pour un usage réel et les limites d’authentification Supabase.
-3. Importer `Eozum/my-trainer` dans Vercel. Framework Next.js, racine du dépôt, Node 24, installation `pnpm install --frozen-lockfile`, build `pnpm build`.
-4. Définir `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL` (origine HTTPS sans slash final), `CRON_SECRET` (secret aléatoire). Aucune clé serveur ne doit porter le préfixe NEXT_PUBLIC.
-5. Déployer, créer deux comptes distincts et effectuer la recette ci-dessous. Les previews doivent utiliser un projet Supabase séparé. Ne pas réutiliser de données personnelles en preview.
-6. Pour Strava, suivre la section Import Strava ci-dessous.
+1. Créer une application sur https://www.strava.com/settings/api.
+2. Configurer son domaine de callback, par exemple `mon-app.vercel.app` (sans protocole ni chemin). Le retour OAuth utilisé est `https://mon-app.vercel.app/api/strava/callback`.
+3. Copier `.env.example` vers `.env.local` et renseigner `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `APP_URL` (origine de l’application) et `TOKEN_ENCRYPTION_KEY` (générée avec `openssl rand -hex 32`). En production, utiliser les variables d’environnement Vercel et redéployer. Ne jamais committer les secrets.
+4. Cliquer sur « Connect with Strava », autoriser la lecture des activités, puis « Importer depuis Strava ».
 
-GitHub Actions vérifie les types, les tests et la compilation sur chaque push/PR. Vercel peut générer une preview pour chaque PR ; la production suit main après fusion. Aucune fusion automatique.
+L’import récupère les courses Run/TrailRun/VirtualRun des 90 derniers jours. Les unités sont converties et les identifiants dédupliqués ; une course le même jour qu’une séance la marque réalisée, à vérifier manuellement. Les autres sports et les activités sans distance/durée sont ignorés. Le carnet est limité à 1 000 activités. L’import JSON normalisé reste disponible (`public/example-activities.json`, 400 Ko maximum).
 
-## Fonctionnement
+Les jetons Strava sont chiffrés dans un cookie HttpOnly, SameSite=Lax, Secure en production. Ils ne sont pas accessibles au JavaScript du navigateur, ni placés dans le stockage local. Les routes d’écriture contrôlent l’origine de la requête ; les jetons expirés sont renouvelés côté serveur. Cette connexion est propre au navigateur, pas un compte EoTrainer. Un changement de clé de chiffrement nécessite une reconnexion. Déconnecter supprime le cookie ; révoquer complètement l’autorisation dans les paramètres Strava si souhaité.
 
-- Course : nom, date (1 à 365 jours), distance (3 à 100 km), D+, trail/urban trail/route, intention, temps estimé, volume et 2 à 5 sorties/semaine.
-- Historique : JSON normalisé, distances en kilomètres, durées en minutes. Exemple dans `public/example-activities.json`. Les identifiants dédupliquent les réimports. Une activité le même jour marque la séance réalisée ; l’utilisateur doit vérifier cette association.
-- Volume de base : moyenne sur 28 jours si au moins quatre activités, plafonnée au volume déclaré. Sinon volume déclaré. Les semaines sans activités comptent dans la moyenne.
-- Intention « finir » : 90 % du volume ; « progresser » et « chrono » : volume de référence. Le chrono est indicatif et ne force pas l’allure.
-- Progression de 5 % par semaine, limitée à huit incréments, réduction de 20 % chaque quatrième semaine, puis 75 %/50 % dans les deux dernières semaines. Ce sont des heuristiques produit explicites, pas un modèle physiologique validé.
-- Une séance passée encore prévue devient manquée. Chaque séance manquée dans les 14 derniers jours retire 12 % de volume (plancher 60 %) et supprime les séances soutenues. Pas de rattrapage.
-- Les sorties récentes ajustent les durées par leur allure moyenne ; en terrain vallonné cette estimation reste grossière. Pas d’analyse FC, fatigue, sommeil ni prédiction de performance en V1.
-- Les séances passées et les statuts explicites sont conservés. L’affichage recalcule à l’ouverture ; la tâche Vercel quotidienne persiste les mises à jour sans ouvrir l’app. Un import ou une modification recalcule aussi le plan.
-- Les disponibilités sont des jours fixes selon le nombre de sorties. Ni choix fin des jours, ni gestion des blessures en V1. Pour une course proche ou un ultra, l’interface signale les limites.
+Pour les activités Garmin, activer la synchronisation Garmin Connect → Strava. Ni accès partenaire Garmin ni MCP ne sont nécessaires. Aucun appel OpenAI n’est effectué. Vérifier les conditions et règles de marque Strava avant publication, et particulièrement avant toute future utilisation des données avec une IA.
 
-## Import Strava
+## Depuis l’ancienne version
 
-Créer une application sur https://www.strava.com/settings/api et renseigner son domaine de callback (sans chemin). Le retour OAuth est `https://votre-domaine/api/strava/callback`. Configurer `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `APP_URL` et `TOKEN_ENCRYPTION_KEY` (32 octets hexadécimaux). Ne jamais exposer les secrets au navigateur.
+Cette version ne demande plus de compte Supabase et ne lit plus les anciennes tables. Les données existantes en base restent intactes ; elles ne sont pas migrées automatiquement vers le navigateur. Avant de quitter l’ancienne version, récupérer les activités au format JSON si nécessaire ; noter la course et les statuts des séances, qui doivent être ressaisis. Les fichiers SQL sont conservés comme historique et ne sont pas requis pour une nouvelle installation. Les anciennes routes privées et la tâche cron ont été retirées. Retirer les anciens secrets Supabase/Garmin/cron du déploiement après migration et révoquer les autorisations devenues inutiles.
 
-Pour une base existante, exécuter `supabase/migrations/20261018_strava.sql` ; pour une nouvelle base, utiliser `supabase/schema.sql`. Les anciennes connexions Garmin restent en base mais ne sont plus utilisées.
+## Programme
 
-Dans Connexions : connecter Strava, accepter la lecture des activités privées, puis importer les sorties. L’import récupère les 90 derniers jours, uniquement Run/TrailRun/VirtualRun, convertit mètres/secondes en kilomètres/minutes et déduplique les identifiants. Les jetons chiffrés sont renouvelés avant expiration. Déconnecter supprime les jetons locaux ; la révocation complète se fait dans les paramètres Strava. Pas de tâche automatique ni de webhook dans cette version.
+Le moteur conserve les règles existantes : volume récent sur 28 jours, progression bornée, semaines allégées, affûtage et réduction après séances manquées. Les statuts explicites et l’ancrage du programme sont conservés. Ces heuristiques ne sont pas un modèle physiologique ; elles ne prennent pas en compte les blessures ou l’état de santé. Le détail des ajustements est disponible sous le programme, sans rubrique « coach ».
 
-Pour les sorties Garmin, activer Garmin Connect → Strava. La synchronisation historique dépend de ces services. Aucun MCP nécessaire. Respecter les quotas, les conditions API et les exigences de marque Strava avant publication. Aucune donnée Strava n’est envoyée à OpenAI ; toute future utilisation IA doit faire l’objet d’une vérification des conditions applicables.
-
-Recette réelle : connecter/refuser Strava, vérifier un retour falsifié ou expiré, importer deux fois sans doublons, tester le renouvellement après expiration et la déconnexion. Elle nécessite les clés réelles et n’est pas couverte par les tests unitaires.
-
-## Sécurité et limites d’exploitation
-
-L’API vérifie chaque JWT auprès de Supabase, utilise le rôle utilisateur avec RLS et n’accepte aucun identifiant utilisateur fourni dans le corps. Les tokens OAuth et le cron sont les seuls utilisateurs du rôle serveur. Le cron contrôle son secret et utilise une mise à jour conditionnée par updated_at pour éviter d’écraser une écriture concurrente.
-
-Les données utilisateur sont validées par Zod ; import de 400 Ko et requête de 500 Ko maximum. Les jetons Supabase sont conservés par le SDK dans le navigateur : prévenir toute injection de scripts, ne pas ajouter de HTML brut. Le schéma n’inclut pas de clés publiques d’accès aux jetons Garmin. Ne pas journaliser les payloads santé ni les jetons.
-
-Avant ouverture à d’autres personnes : vérifier la recette multi-compte, activer les protections Vercel contre les abus, ajouter politique de confidentialité, export/suppression de compte, supervision et sauvegardes. Les écritures utilisateur utilisent un document JSON par compte : deux onglets modifiant simultanément ce document peuvent se remplacer. Pas de granularité collaborative en V1. Le cron est prévu pour un usage personnel, traite jusqu’à 100 comptes par exécution ; au-delà, ajouter une file de tâches.
-
-## Validation
+## Vérifier
 
 ```sh
-pnpm typecheck
 pnpm test
+pnpm typecheck
 pnpm build
 ```
 
-Tests automatisés : ancrage stable lors des recalculs quotidiens, calendrier, historique, baisse de volume après absence, adaptation au volume récent, affûtage, conservation des statuts, signature OAuth et rejet de cookie falsifié.
+Recette navigateur : modifier une course, recharger et retrouver le programme ; importer deux fois le même JSON sans doublon ; modifier un statut ; tester sur mobile. Avec les clés Strava réelles : connexion/refus, import, renouvellement du jeton et déconnexion. Les tests automatisés couvrent le moteur, le stockage normalisé, les imports et le protocole Strava avec réponses simulées ; ils ne prouvent pas une connexion réelle à Strava.
 
-Recette avec secrets réels (à effectuer après configuration) :
-
-- Compte A : générer une course, se reconnecter et retrouver la configuration.
-- Compte B : aucun accès à l’état A via API ou requête Supabase directe.
-- API sans token : 401. Entrées invalides : rejetées.
-- Importer deux fois un fichier : aucune activité dupliquée.
-- Passer une séance à manquée, recalculer, vérifier réduction et conservation du passé.
-- Cron sans secret : 401 ; avec secret : mise à jour persistée.
-- Strava : refus de consentement, callback expiré/falsifié, échange réussi et absence de jetons dans le navigateur.
-
-## V2
-
-Itinéraires selon distance, D+, terrain et point de départ, aperçu carte puis validation avant export GPX. Conserver la géolocalisation facultative. Aucune génération d’itinéraire en V1.
+Déploiement Vercel : framework Next.js, Node 24, `pnpm install --frozen-lockfile`, `pnpm build`. Aucun service Supabase requis.
