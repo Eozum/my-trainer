@@ -21,7 +21,7 @@ Sans variables, le tableau de bord fonctionne en démonstration en mémoire. Auc
 3. Importer `Eozum/my-trainer` dans Vercel. Framework Next.js, racine du dépôt, Node 24, installation `pnpm install --frozen-lockfile`, build `pnpm build`.
 4. Définir `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL` (origine HTTPS sans slash final), `CRON_SECRET` (secret aléatoire). Aucune clé serveur ne doit porter le préfixe NEXT_PUBLIC.
 5. Déployer, créer deux comptes distincts et effectuer la recette ci-dessous. Les previews doivent utiliser un projet Supabase séparé. Ne pas réutiliser de données personnelles en preview.
-6. Pour Garmin, renseigner aussi `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY` (32 octets hexadécimaux, `openssl rand -hex 32`), et enregistrer exactement `https://votre-domaine/api/garmin/callback` chez Garmin.
+6. Pour Strava, suivre la section Import Strava ci-dessous.
 
 GitHub Actions vérifie les types, les tests et la compilation sur chaque push/PR. Vercel peut générer une preview pour chaque PR ; la production suit main après fusion. Aucune fusion automatique.
 
@@ -37,16 +37,17 @@ GitHub Actions vérifie les types, les tests et la compilation sur chaque push/P
 - Les séances passées et les statuts explicites sont conservés. L’affichage recalcule à l’ouverture ; la tâche Vercel quotidienne persiste les mises à jour sans ouvrir l’app. Un import ou une modification recalcule aussi le plan.
 - Les disponibilités sont des jours fixes selon le nombre de sorties. Ni choix fin des jours, ni gestion des blessures en V1. Pour une course proche ou un ultra, l’interface signale les limites.
 
-## Garmin : état exact
+## Import Strava
 
-Implémenté : démarrage OAuth 2 PKCE, cookie HttpOnly SameSite Lax signé et limité à 10 min, contrôle state, échange du code côté serveur et chiffrement AES-256-GCM des jetons en base. Clés et jetons absents du navigateur et des réponses API. La table de jetons n’a aucune policy utilisateur.
+Créer une application sur https://www.strava.com/settings/api et renseigner son domaine de callback (sans chemin). Le retour OAuth est `https://votre-domaine/api/strava/callback`. Configurer `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `APP_URL` et `TOKEN_ENCRYPTION_KEY` (32 octets hexadécimaux). Ne jamais exposer les secrets au navigateur.
 
-**Non implémenté / non validé en conditions réelles** : réception des webhooks Activity API, récupération/backfill des activités, renouvellement des jetons, révocation/déconnexion et gestion des changements de consentement. L’app ne présente donc pas l’autorisation comme une synchronisation active. L’accès partenaire Garmin est nécessaire pour finir cette intégration. Les identifiants Garmin personnels ne sont jamais demandés à l’application.
+Pour une base existante, exécuter `supabase/migrations/20261018_strava.sql` ; pour une nouvelle base, utiliser `supabase/schema.sql`. Les anciennes connexions Garmin restent en base mais ne sont plus utilisées.
 
-L’import JSON authentifié rend le MVP utilisable avant cette intégration. Le MCP local n’est pas un service joignable depuis Vercel ; un pont d’export devra s’exécuter sur le Mac ou une infrastructure dédiée. Ne pas exposer le MCP sans authentification.
+Dans Connexions : connecter Strava, accepter la lecture des activités privées, puis importer les sorties. L’import récupère les 90 derniers jours, uniquement Run/TrailRun/VirtualRun, convertit mètres/secondes en kilomètres/minutes et déduplique les identifiants. Les jetons chiffrés sont renouvelés avant expiration. Déconnecter supprime les jetons locaux ; la révocation complète se fait dans les paramètres Strava. Pas de tâche automatique ni de webhook dans cette version.
 
-Spécification : https://developerportal.garmin.com/sites/default/files/OAuth2PKCE.pdf
-Programme : https://developer.garmin.com/gc-developer-program/program-faq/
+Pour les sorties Garmin, activer Garmin Connect → Strava. La synchronisation historique dépend de ces services. Aucun MCP nécessaire. Respecter les quotas, les conditions API et les exigences de marque Strava avant publication. Aucune donnée Strava n’est envoyée à OpenAI ; toute future utilisation IA doit faire l’objet d’une vérification des conditions applicables.
+
+Recette réelle : connecter/refuser Strava, vérifier un retour falsifié ou expiré, importer deux fois sans doublons, tester le renouvellement après expiration et la déconnexion. Elle nécessite les clés réelles et n’est pas couverte par les tests unitaires.
 
 ## Sécurité et limites d’exploitation
 
@@ -74,7 +75,7 @@ Recette avec secrets réels (à effectuer après configuration) :
 - Importer deux fois un fichier : aucune activité dupliquée.
 - Passer une séance à manquée, recalculer, vérifier réduction et conservation du passé.
 - Cron sans secret : 401 ; avec secret : mise à jour persistée.
-- Garmin : refus de consentement, callback expiré/falsifié, échange réussi et absence de jetons dans le navigateur.
+- Strava : refus de consentement, callback expiré/falsifié, échange réussi et absence de jetons dans le navigateur.
 
 ## V2
 
