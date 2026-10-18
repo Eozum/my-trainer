@@ -1,5 +1,6 @@
 "use client";
 
+import Statistics from "./components/statistics";
 import {useEffect, useState} from "react";
 import {addDays, day, defaultRace, stateSchema, type Race, type State} from "@/lib/model";
 import {generate} from "@/lib/planner";
@@ -15,6 +16,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState(false);
   const [message, setMessage] = useState("");
+  const [view, setView] = useState("programme");
   const [week, setWeek] = useState(0);
 
   useEffect(() => {
@@ -39,6 +41,13 @@ export default function Home() {
     fetch("/api/strava/status").then(r => r.ok ? r.json() : null)
       .then(data => setConnected(data?.connected === true)).catch(() => {});
     setReady(true);
+  }, []);
+
+  useEffect(() => {
+    const navigate = () => setView(window.location.hash === "#statistiques" ? "statistiques" : "programme");
+    navigate();
+    window.addEventListener("hashchange", navigate);
+    return () => window.removeEventListener("hashchange", navigate);
   }, []);
 
   function save(next: State) {
@@ -101,10 +110,21 @@ export default function Home() {
   const distance = sessions.reduce((sum, session) => sum + session.km, 0);
 
   if (!ready) return <main className="loading" aria-busy="true">Chargement…</main>;
-  return <main className="notebook">
-    <header className="masthead"><a href="/" className="brand">EoTrainer<span>Mon carnet de course</span></a><span className="storage-note">Enregistré sur cet appareil</span></header>
+  return <div className="app-layout">
+    <a href="#main-content" className="skip-link">Aller au contenu</a>
+    <aside className="sidebar">
+      <a href="#programme" className="brand">EoTrainer<span>Mon carnet de course</span></a>
+      <nav aria-label="Navigation principale">
+        <a href="#programme" aria-current={view === "programme" ? "page" : undefined}><span aria-hidden="true">☷</span> Mon programme</a>
+        <a href="#statistiques" aria-current={view === "statistiques" ? "page" : undefined}><span aria-hidden="true">▥</span> Statistiques</a>
+      </nav>
+      <p className="sidebar-note">Une sortie après l’autre.</p>
+    </aside>
+    <main id="main-content" className="notebook">
+    <header className="masthead"><span>{view === "statistiques" ? "Mes sorties en chiffres" : "Mon entraînement"}</span><span className="storage-note">Enregistré sur cet appareil</span></header>
     {message && <div className="notice" role="status"><span>{message}</span><button aria-label="Fermer le message" onClick={() => setMessage("")}>×</button></div>}
 
+    {view === "statistiques" ? <Statistics activities={state.activities}/> : <div id="programme">
     <section className="goal" aria-labelledby="goal-title">
       <p className="eyebrow">Le prochain départ</p>
       <h1 id="goal-title">{state.race.name}</h1>
@@ -154,6 +174,7 @@ export default function Home() {
       <p className="small">Strava : courses des 90 derniers jours, à la demande. Aucun envoi à une IA. <a href="/example-activities.json" download>Exemple de fichier JSON</a></p>
       <details><summary>Voir les dernières sorties</summary>{state.activities.length ? <ul className="activity-list">{state.activities.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(activity => <li key={activity.id}><time dateTime={activity.date}>{format(activity.date)}</time><span>{activity.distance.toFixed(1)} km</span><span>{Math.round(activity.minutes)} min</span><span>{Math.round(activity.elevation)} m D+</span></li>)}</ul> : <p>Aucune sortie importée pour le moment.</p>}</details>
     </section>
+    </div>}
     <footer>Ton carnet reste dans ce navigateur. Il n’est pas synchronisé entre appareils. Effacer les données du navigateur efface le carnet et peut déconnecter Strava.</footer>
-  </main>;
+  </main></div>;
 }

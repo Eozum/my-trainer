@@ -30,6 +30,12 @@ Pour les activités Garmin, activer la synchronisation Garmin Connect → Strava
 
 Cette version ne demande plus de compte Supabase et ne lit plus les anciennes tables. Les données existantes en base restent intactes ; elles ne sont pas migrées automatiquement vers le navigateur. Avant de quitter l’ancienne version, récupérer les activités au format JSON si nécessaire ; noter la course et les statuts des séances, qui doivent être ressaisis. Les fichiers SQL sont conservés comme historique et ne sont pas requis pour une nouvelle installation. Les anciennes routes privées et la tâche cron ont été retirées. Retirer les anciens secrets Supabase/Garmin/cron du déploiement après migration et révoquer les autorisations devenues inutiles.
 
+## Statistiques
+
+La navigation de gauche permet de passer du programme aux statistiques (sur mobile, elle est placée en haut). La page présente les kilomètres cumulés, le nombre de courses, la distance moyenne, l’allure moyenne, la durée et le dénivelé positif. Choisir les 7 ou 30 derniers jours (aujourd’hui inclus) ou tout l’historique importé. Les séances planifiées et les dates futures sont exclues.
+
+L’allure globale est la durée cumulée divisée par la distance cumulée, et non la moyenne des allures de chaque sortie. Les 20 dernières courses de la période sont affichées avec leur date, distance, durée, allure et D+. Le nom Strava est conservé lors des nouveaux imports ; les anciennes activités sans nom restent compatibles et apparaissent comme « Sortie à pied ». Les chiffres reposent uniquement sur les activités disponibles dans le navigateur ; l’import Strava reste limité aux 90 derniers jours.
+
 ## Programme
 
 Le moteur conserve les règles existantes : volume récent sur 28 jours, progression bornée, semaines allégées, affûtage et réduction après séances manquées. Les statuts explicites et l’ancrage du programme sont conservés. Ces heuristiques ne sont pas un modèle physiologique ; elles ne prennent pas en compte les blessures ou l’état de santé. Le détail des ajustements est disponible sous le programme, sans rubrique « coach ».

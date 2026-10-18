@@ -16,3 +16,4 @@ test("refresh exchange validates tokens and keeps credentials in request body",a
  globalThis.fetch=async()=>Response.json({access_token:"incomplete"});await assert.rejects(()=>exchange({grant_type:"refresh_token",refresh_token:"old"}));
  }finally{globalThis.fetch=original;}
 });
+test("Strava preserves the run name for history without breaking older imports",()=>{assert.equal(normalizeActivity({...row,name:"Les bords de Loire"})?.name,"Les bords de Loire");assert.equal(normalizeActivity(row)?.name,undefined);});
