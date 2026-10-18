@@ -1,5 +1,6 @@
 "use client";
 
+import Coach from "./components/coach";
 import Statistics from "./components/statistics";
 import {useEffect, useState} from "react";
 import {addDays, day, defaultRace, stateSchema, type Race, type State} from "@/lib/model";
@@ -59,7 +60,7 @@ export default function Home() {
 
   function build() {
     try {
-      const next = {...state, race: draft, planStart: JSON.stringify(draft) === JSON.stringify(state.race)
+      const next = {...state, coachPlanId: undefined, race: draft, planStart: JSON.stringify(draft) === JSON.stringify(state.race)
         ? state.planStart ?? day() : day()};
       save({...next, sessions: generate(next).sessions});
       setWeek(0);
@@ -165,6 +166,12 @@ export default function Home() {
       <details className="adjustments"><summary>Comprendre le programme</summary>{plan.reasons.map(reason => <p key={reason}>{reason}</p>)}<p>Ces repères ne tiennent pas compte des blessures ni de ton état de santé.</p></details>
     </section>
 
+    <Coach state={state} disabled={busy} onBusy={setBusy} onState={next => {
+      setState(next); setDraft(next.race); setWeek(0);
+      try {localStorage.setItem(STORAGE_KEY, JSON.stringify(next));}
+      catch {setMessage("Le programme est sauvegardé sur le serveur, mais le stockage local est indisponible.");}
+    }}/>
+
     <section className="history" aria-labelledby="history-title">
       <div className="section-heading"><h2 id="history-title">Mes sorties</h2><span className="muted">{state.activities.length} {state.activities.length === 1 ? "enregistrée" : "enregistrées"}</span></div>
       <p>Importe tes courses pour ajuster le programme à ce que tu fais vraiment.</p>
@@ -175,6 +182,6 @@ export default function Home() {
       <details><summary>Voir les dernières sorties</summary>{state.activities.length ? <ul className="activity-list">{state.activities.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(activity => <li key={activity.id}><time dateTime={activity.date}>{format(activity.date)}</time><span>{activity.distance.toFixed(1)} km</span><span>{Math.round(activity.minutes)} min</span><span>{Math.round(activity.elevation)} m D+</span></li>)}</ul> : <p>Aucune sortie importée pour le moment.</p>}</details>
     </section>
     </div>}
-    <footer>Ton carnet reste dans ce navigateur. Il n’est pas synchronisé entre appareils. Effacer les données du navigateur efface le carnet et peut déconnecter Strava.</footer>
+    <footer>Ton carnet est conservé dans ce navigateur. Le carnet privé permet aussi une sauvegarde manuelle en ligne. Effacer les données du navigateur efface la copie locale et peut déconnecter Strava.</footer>
   </main></div>;
 }
