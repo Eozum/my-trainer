@@ -119,7 +119,6 @@ export default function Home() {
         <a href="#programme" aria-current={view === "programme" ? "page" : undefined}><span aria-hidden="true">☷</span> Mon programme</a>
         <a href="#statistiques" aria-current={view === "statistiques" ? "page" : undefined}><span aria-hidden="true">▥</span> Statistiques</a>
       </nav>
-      <p className="sidebar-note">Une sortie après l’autre.</p>
     </aside>
     <main id="main-content" className="notebook">
     <header className="masthead"><span>{view === "statistiques" ? "Mes sorties en chiffres" : "Mon entraînement"}</span><span className="storage-note">Enregistré sur cet appareil</span></header>
@@ -127,7 +126,7 @@ export default function Home() {
 
     {view === "statistiques" ? <Statistics activities={state.activities}/> : <div id="programme">
     <section className="goal" aria-labelledby="goal-title">
-      <p className="eyebrow">Le prochain départ</p>
+      <p className="eyebrow">Course prévue</p>
       <h1 id="goal-title">{state.race.name}</h1>
       <p>{format(state.race.date)} · {state.race.distance} km · {state.race.elevation} m D+</p>
       <details className="goal-editor"><summary>Modifier ma course</summary>
@@ -151,7 +150,7 @@ export default function Home() {
     <section className="week" aria-labelledby="week-title">
       <div className="section-heading"><h2 id="week-title">{week === 0 ? "Cette semaine" : "La suite"}</h2><div className="pager"><button disabled={week === 0} aria-label="Semaine précédente" onClick={() => setWeek(week - 1)}>←</button><span>{format(start)} – {format(addDays(start, 6))}</span><button disabled={addDays(start, 7) > state.race.date} aria-label="Semaine suivante" onClick={() => setWeek(week + 1)}>→</button></div></div>
       <p className="muted">{sessions.length} sorties · {distance.toFixed(1)} km prévus</p>
-      <div className="sessions">{sessions.map(session => <article className="session" key={session.id}>
+      <div className="sessions">{sessions.map(session => <article className="session" data-status={session.status} key={session.id}>
         <time dateTime={session.date}>{new Date(`${session.date}T12:00:00`).toLocaleDateString("fr-FR", {weekday: "short", day: "numeric"})}</time>
         <div className="session-copy"><h3>{session.kind}</h3><p>{session.km} km · {session.minutes} min{session.elevation > 0 && ` · ${session.elevation} m D+`}</p><details><summary>Détail de la séance</summary><p>{session.note}</p></details></div>
         <select aria-label={`Statut du ${format(session.date)}`} disabled={busy} value={session.status} onChange={event => {
@@ -162,7 +161,6 @@ export default function Home() {
         }}><option value="planned">À venir</option>{session.date <= day() && <option value="done">Réalisée</option>}<option value="missed">Manquée</option></select>
       </article>)}</div>
       {!sessions.length && <p className="empty">Pas de séance prévue. Modifie ta course pour préparer la suite.</p>}
-      <p className="rest">Entre les sorties, place à la récupération.</p>
       <details className="adjustments"><summary>Comprendre le programme</summary>{plan.reasons.map(reason => <p key={reason}>{reason}</p>)}<p>Ces repères ne tiennent pas compte des blessures ni de ton état de santé.</p></details>
     </section>
 
@@ -174,7 +172,7 @@ export default function Home() {
 
     <section className="history" aria-labelledby="history-title">
       <div className="section-heading"><h2 id="history-title">Mes sorties</h2><span className="muted">{state.activities.length} {state.activities.length === 1 ? "enregistrée" : "enregistrées"}</span></div>
-      <p>Importe tes courses pour ajuster le programme à ce que tu fais vraiment.</p>
+      <p>Importer des activités pour recalculer le programme.</p>
       <div className="import-actions">{connected ? <><button className="primary strava-button" disabled={busy} onClick={() => strava("sync")}>{busy ? "Patiente…" : "Importer depuis Strava"}</button><button disabled={busy} onClick={() => strava("disconnect")}>Déconnecter Strava</button></> : <button className="primary strava-button" disabled={busy} onClick={() => strava("connect")}>Connect with Strava</button>}
         <label className="file-button">Importer un fichier JSON<input type="file" accept="application/json,.json" disabled={busy} onChange={event => {const file = event.target.files?.[0]; event.target.value = ""; void importFile(file);}}/></label>
       </div>
