@@ -15,6 +15,7 @@ export function generate(state:State,today=day()) {
  if(days<28) reasons.push("Préparation courte : priorité à la continuité, sans chercher à combler le retard.");
  if(race.distance>42) reasons.push("Distance ultra : cette base générique demande une validation par un entraîneur.");
  if(race.goal==="time") reasons.push(`Objectif ${race.targetMinutes} min enregistré ; il ne force pas une allure sans référence de performance.`);
+ if(state.coachPlanId) return {sessions:old,reasons:["Programme validé avec l’IA. Les séances restent inchangées jusqu’à une nouvelle adaptation ou un recalcul manuel."],base:Math.round(base*factor*10)/10,completed,missed};
  const slots=({2:[2,6],3:[1,3,6],4:[1,3,5,6],5:[0,1,3,5,6]} as Record<number,number[]>)[race.days];
  const sessions:Session[]=old.filter(s=>s.date<today);
  for(let i=0;i<=days;i++){
