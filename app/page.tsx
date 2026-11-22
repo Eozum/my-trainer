@@ -87,13 +87,13 @@ export default function Home() {
     setState(checked);
   }
 
-  function build() {
+  function build(race = draft) {
     try {
-      const next = {...state, coachPlanId: undefined, race: draft, planStart: JSON.stringify(draft) === JSON.stringify(state.race)
+      const next = {...state, coachPlanId: undefined, race, planStart: JSON.stringify(race) === JSON.stringify(state.race)
         ? state.planStart ?? day() : day()};
       save({...next, sessions: generate(next).sessions});
       setWeek(0);
-      setMessage("Ton programme est enregistré.");
+      setMessage("Ton programme a été généré à partir de ton objectif.");
     } catch {
       setMessage("Vérifie la date et les valeurs de ta course, ainsi que l’espace disponible dans ton navigateur.");
     }
@@ -185,7 +185,8 @@ export default function Home() {
       <p className="eyebrow">Course prévue</p>
       <h1 id="goal-title">{state.race.name}</h1>
       <p>{format(state.race.date)} · {state.race.distance} km · {state.race.elevation} m D+</p>
-      <details className="goal-editor"><summary>Modifier ma course</summary>
+      <p className="muted">Objectif · {state.race.goal === "finish" ? "Finir" : state.race.goal === "progress" ? "Progresser" : `Viser ${state.race.targetMinutes} min`}</p>
+      <details className="goal-editor"><summary>Modifier ma course et mon objectif</summary>
         <form onSubmit={event => {event.preventDefault(); build();}}>
           <div className="fields">
             <label className="wide">Nom de la course<input required maxLength={80} value={draft.name} onChange={e => field("name", e.target.value)}/></label>
@@ -198,7 +199,7 @@ export default function Home() {
             <label>Volume habituel (km/semaine)<input required type="number" min="5" max="150" value={draft.weeklyKm} onChange={e => field("weeklyKm", +e.target.value)}/></label>
             <label>Sorties par semaine<select value={draft.days} onChange={e => field("days", +e.target.value)}>{[2, 3, 4, 5].map(n => <option key={n}>{n}</option>)}</select></label>
           </div>
-          <button className="primary" disabled={busy}>Enregistrer et adapter le programme</button>
+          <button className="primary" disabled={busy}>Générer mon programme</button>
         </form>
       </details>
     </section>
@@ -219,6 +220,8 @@ export default function Home() {
       {!sessions.length && <p className="empty">Pas de séance prévue. Modifie ta course pour préparer la suite.</p>}
       <details className="adjustments"><summary>Comprendre le programme</summary>{plan.reasons.map(reason => <p key={reason}>{reason}</p>)}<p>Ces repères ne tiennent pas compte des blessures ni de ton état de santé.</p></details>
     </section>
+
+    {state.coachPlanId && <p><button type="button" disabled={busy} onClick={() => build(state.race)}>Recalculer mon programme</button></p>}
 
     <Coach state={state} disabled={busy} onBusy={setBusy} onState={next => {
       setState(next); setDraft(next.race); setWeek(0);
