@@ -1,8 +1,14 @@
 import {createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual} from "node:crypto";
 
+const keyPattern = /^[a-fA-F0-9]{64}$/;
+
+export function hasEncryptionKey() {
+  return keyPattern.test(process.env.TOKEN_ENCRYPTION_KEY ?? "");
+}
+
 function key() {
   const value = process.env.TOKEN_ENCRYPTION_KEY ?? "";
-  if (!/^[a-fA-F0-9]{64}$/.test(value)) throw Error("Missing encryption key");
+  if (!keyPattern.test(value)) throw Error("Missing encryption key");
   return Buffer.from(value, "hex");
 }
 

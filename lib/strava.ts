@@ -2,9 +2,29 @@ import {z} from "zod";
 import {activitySchema,type Activity} from "./model";
 export const tokenSchema=z.object({access_token:z.string().min(1),refresh_token:z.string().min(1),expires_at:z.number().int().positive()});
 export type Tokens=z.infer<typeof tokenSchema>;
-export async function exchange(fields:Record<string,string>):Promise<Tokens>{
- const response=await fetch("https://www.strava.com/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:process.env.STRAVA_CLIENT_ID!,client_secret:process.env.STRAVA_CLIENT_SECRET!,...fields}),signal:AbortSignal.timeout(15000),cache:"no-store"});
- if(!response.ok)throw Error("Strava token exchange failed");return tokenSchema.parse(await response.json());
+export const credentialsSchema = z.object({
+  clientId: z.string().trim().regex(/^\d{1,20}$/),
+  clientSecret: z.string().trim().min(1).max(256),
+});
+export type StravaCredentials = z.infer<typeof credentialsSchema>;
+
+export function serverCredentials() {
+  const result = credentialsSchema.safeParse({
+    clientId: process.env.STRAVA_CLIENT_ID,
+    clientSecret: process.env.STRAVA_CLIENT_SECRET,
+  });
+  return result.success ? result.data : null;
+}
+
+export async function exchange(fields: Record<string, string>, credentials: StravaCredentials): Promise<Tokens> {
+  const response = await fetch("https://www.strava.com/oauth/token", {
+    method: "POST",
+    body: new URLSearchParams({ ...fields, client_id: credentials.clientId, client_secret: credentials.clientSecret }),
+    signal: AbortSignal.timeout(15000),
+    cache: "no-store",
+  });
+  if (!response.ok) throw Error("Strava token exchange failed");
+  return tokenSchema.parse(await response.json());
 }
 const summary=z.object({name:z.string().trim().min(1).max(200).optional(),id:z.number().int().positive(),sport_type:z.string(),start_date_local:z.string().regex(/^\d{4}-\d{2}-\d{2}T/),distance:z.number().nonnegative(),moving_time:z.number().nonnegative(),total_elevation_gain:z.number().nonnegative()});
 export function normalizeActivity(value:unknown):Activity|null{const a=summary.parse(value);if(!["Run","TrailRun","VirtualRun"].includes(a.sport_type)||!a.distance||!a.moving_time)return null;return activitySchema.parse({...(a.name ? {name:a.name} : {}),id:`strava:${a.id}`,date:a.start_date_local.slice(0,10),distance:a.distance/1000,minutes:a.moving_time/60,elevation:a.total_elevation_gain});}

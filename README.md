@@ -15,14 +15,16 @@ Le programme et l’import JSON fonctionnent sans configuration serveur. La cour
 
 ## Connecter Strava (facultatif)
 
-1. Créer une application sur https://www.strava.com/settings/api.
-2. Configurer son domaine de callback, par exemple `mon-app.vercel.app` (sans protocole ni chemin). Le retour OAuth utilisé est `https://mon-app.vercel.app/api/strava/callback`.
-3. Copier `.env.example` vers `.env.local` et renseigner `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `APP_URL` (origine de l’application) et `TOKEN_ENCRYPTION_KEY` (générée avec `openssl rand -hex 32`). En production, utiliser les variables d’environnement Vercel et redéployer. Ne jamais committer les secrets.
-4. Cliquer sur « Connect with Strava », autoriser la lecture des activités, puis « Importer depuis Strava ».
+1. Créer ou ouvrir une application dans les [paramètres API Strava](https://www.strava.com/settings/api).
+2. Définir son domaine de rappel avec le nom d’hôte affiché dans le formulaire, par exemple `mon-app.vercel.app` ou `localhost`, sans protocole ni chemin. Strava redirige vers `/api/strava/callback`.
+3. Dans « Mes sorties », cliquer sur « Connect with Strava ». Si le serveur ne fournit pas d’identifiants Strava, saisir le Client ID et le Client Secret de son application. Si le serveur en fournit, le bouton lance directement l’autorisation et « Utiliser ma propre application Strava » donne accès au formulaire.
+4. Autoriser la lecture des activités privées sur Strava, puis cliquer sur « Importer depuis Strava » au retour.
+
+Pour héberger l’intégration, renseigner `TOKEN_ENCRYPTION_KEY` avec une clé générée par `openssl rand -hex 32`. Utiliser `APP_URL` pour l’origine de l’application, notamment si elle utilise un domaine personnalisé. Sans `APP_URL`, l’intégration Strava utilise le domaine de production fourni par la variable système Vercel `VERCEL_PROJECT_PRODUCTION_URL` lorsqu’elle est disponible. Pour activer le parcours en un clic, renseigner aussi `STRAVA_CLIENT_ID` et `STRAVA_CLIENT_SECRET` sur le serveur. Copier `.env.example` vers `.env.local` en local, ou renseigner les variables dans Vercel puis redéployer.
 
 L’import récupère les courses Run/TrailRun/VirtualRun des 90 derniers jours. Les unités sont converties et les identifiants dédupliqués ; une course le même jour qu’une séance la marque réalisée, à vérifier manuellement. Les autres sports et les activités sans distance/durée sont ignorés. Le carnet est limité à 1 000 activités. L’import JSON normalisé reste disponible (`public/example-activities.json`, 400 Ko maximum).
 
-Les jetons Strava sont chiffrés dans un cookie HttpOnly, SameSite=Lax, Secure en production. Ils ne sont pas accessibles au JavaScript du navigateur, ni placés dans le stockage local. Les routes d’écriture contrôlent l’origine de la requête ; les jetons expirés sont renouvelés côté serveur. Cette connexion est propre au navigateur, pas un compte EoTrainer. Un changement de clé de chiffrement nécessite une reconnexion. Déconnecter supprime le cookie ; révoquer complètement l’autorisation dans les paramètres Strava si souhaité.
+Les jetons Strava et les identifiants renseignés dans l’interface sont chiffrés côté serveur dans un cookie HttpOnly, SameSite=Lax, Secure en production. Ils ne sont pas accessibles au JavaScript du navigateur, ni placés dans le stockage local. Les routes d’écriture contrôlent l’origine de la requête ; les jetons expirés sont renouvelés côté serveur avec les identifiants de la connexion. Cette connexion est propre au navigateur, pas un compte EoTrainer. Un changement de clé de chiffrement nécessite une reconnexion. Déconnecter supprime le cookie ; révoquer complètement l’autorisation dans les paramètres Strava si souhaité.
 
 Pour les activités Garmin, activer la synchronisation Garmin Connect → Strava. Ni accès partenaire Garmin ni MCP ne sont nécessaires. L’import Strava n’effectue aucun appel OpenAI ; les activités identifiées Strava sont exclues de la fonctionnalité IA facultative. Vérifier les conditions et règles de marque Strava avant publication, et particulièrement avant toute future utilisation des données avec une IA.
 
