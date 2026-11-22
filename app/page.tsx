@@ -2,7 +2,7 @@
 
 import Coach from "./components/coach";
 import Statistics from "./components/statistics";
-import {useEffect, useState} from "react";
+import {useEffect, useState, type FormEvent} from "react";
 import {addDays, day, defaultRace, stateSchema, type Race, type State} from "@/lib/model";
 import {generate} from "@/lib/planner";
 import {importActivities, restoreState, STORAGE_KEY} from "@/lib/local-state";
@@ -10,12 +10,22 @@ import {importActivities, restoreState, STORAGE_KEY} from "@/lib/local-state";
 const freshState = (): State => ({planStart: day(), race: defaultRace, activities: [], sessions: []});
 const format = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString("fr-FR", {day: "numeric", month: "short"});
 
+const stravaResults: Record<string, string> = {
+  denied: "Tu as annulé l’autorisation sur Strava. Tu peux réessayer.",
+  expired: "La demande de connexion a expiré ou a été remplacée. Relance-la depuis cet onglet.",
+  scope: "Autorise la lecture de toutes tes activités sur Strava, y compris les activités privées, pour activer l’import.",
+  error: "La connexion a échoué. Si tu utilises ta propre application Strava, vérifie le Client ID, le Client Secret et le domaine de rappel.",
+};
+
 export default function Home() {
   const [state, setState] = useState<State>(freshState);
   const [draft, setDraft] = useState<Race>(defaultRace);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [stravaStatus, setStravaStatus] = useState<{defaultConfigured: boolean; callbackDomain?: string; error?: string} | null>(null);
+  const [showStravaSetup, setShowStravaSetup] = useState(false);
+  const [stravaMessage, setStravaMessage] = useState("");
   const [message, setMessage] = useState("");
   const [view, setView] = useState("programme");
   const [week, setWeek] = useState(0);
@@ -32,15 +42,29 @@ export default function Home() {
       setMessage("La sauvegarde locale est indisponible ou illisible. Elle n’a pas été remplacée.");
     }
     const params = new URLSearchParams(window.location.search);
-    if (params.has("strava")) {
-      setMessage(params.get("strava") === "connected"
-        ? "Strava est connecté. Tu peux importer tes sorties."
-        : "La connexion Strava n’a pas abouti. Tu peux réessayer.");
+    const result = params.get("strava");
+    if (result !== null) {
       params.delete("strava");
-      window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}${params.size ? `?${params}` : ""}#strava`);
+      if (result !== "connected") {
+        setStravaMessage(Object.hasOwn(stravaResults, result) ? stravaResults[result] : stravaResults.error);
+      }
     }
-    fetch("/api/strava/status").then(r => r.ok ? r.json() : null)
-      .then(data => setConnected(data?.connected === true)).catch(() => {});
+
+    fetch("/api/strava/status", { cache: "no-store" }).then(async response => {
+      if (!response.ok) throw Error();
+      const data = await response.json();
+      setStravaStatus(data);
+      setConnected(data.connected === true);
+      if (result === "connected") {
+        setStravaMessage(data.connected
+          ? "Strava est connecté. Tu peux importer tes sorties."
+          : "La connexion Strava n’a pas été enregistrée. Vérifie que ton navigateur accepte les cookies puis réessaie.");
+      }
+    }).catch(() => {
+      setStravaStatus({ defaultConfigured: false, callbackDomain: window.location.hostname });
+      setStravaMessage("Le statut de Strava est indisponible. Recharge la page ou réessaie la connexion.");
+    });
     setReady(true);
   }, []);
 
@@ -50,6 +74,10 @@ export default function Home() {
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
   }, []);
+
+  useEffect(() => {
+    if (ready && window.location.hash === "#strava") document.getElementById("strava")?.focus();
+  }, [ready]);
 
   function save(next: State) {
     const checked = stateSchema.parse(next);
@@ -82,23 +110,50 @@ export default function Home() {
     } finally {setBusy(false);}
   }
 
-  async function strava(action: "connect" | "sync" | "disconnect") {
+  async function strava(action: "connect" | "sync" | "disconnect", form?: HTMLFormElement) {
     setBusy(true);
+    setStravaMessage("");
     try {
-      const response = await fetch(`/api/strava/${action}`, {method: "POST"});
-      const data = await response.json();
-      if (!response.ok) throw Error(data.error ?? "Strava est indisponible.");
-      if (action === "connect") {window.location.assign(data.url); return;}
+      const options: RequestInit = { method: "POST" };
+      if (form) {
+        const fields = new FormData(form);
+        options.headers = { "Content-Type": "application/json" };
+        options.body = JSON.stringify({ clientId: fields.get("clientId"), clientSecret: fields.get("clientSecret") });
+      }
+      const response = await fetch(`/api/strava/${action}`, options).catch(() => null);
+      const data = await response?.json().catch(() => null);
+      if (!response?.ok || !data) {
+        if (data?.setupRequired) setShowStravaSetup(true);
+        throw Error(data?.error ?? "Impossible de joindre le service Strava. Réessaie.");
+      }
+      if (action === "connect") {
+        form?.reset();
+        window.location.assign(data.url);
+        return;
+      }
       if (action === "sync") {
         save(importActivities(state, data.activities));
-        setMessage("Sorties importées depuis Strava. Vérifie les correspondances avec les séances du même jour.");
+        setStravaMessage("Sorties importées depuis Strava. Vérifie les correspondances avec les séances du même jour.");
       } else {
         setConnected(false);
-        setMessage("Strava déconnecté de cet appareil. Tu peux aussi révoquer l’accès dans les paramètres Strava.");
+        setShowStravaSetup(false);
+        setStravaMessage("Strava est déconnecté de ce navigateur. Tu peux aussi révoquer l’accès dans les paramètres Strava.");
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Opération impossible.");
-    } finally {setBusy(false);}
+      setStravaMessage(error instanceof Error ? error.message : "Opération impossible.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function connectStrava() {
+    if (stravaStatus?.defaultConfigured) void strava("connect");
+    else setShowStravaSetup(true);
+  }
+
+  function submitStravaSetup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void strava("connect", event.currentTarget);
   }
 
   function field<K extends keyof Race>(key: K, value: Race[K]) {setDraft({...draft, [key]: value});}
@@ -173,8 +228,32 @@ export default function Home() {
     <section className="history" aria-labelledby="history-title">
       <div className="section-heading"><h2 id="history-title">Mes sorties</h2><span className="muted">{state.activities.length} {state.activities.length === 1 ? "enregistrée" : "enregistrées"}</span></div>
       <p>Importer des activités pour recalculer le programme.</p>
-      <div className="import-actions">{connected ? <><button className="primary strava-button" disabled={busy} onClick={() => strava("sync")}>{busy ? "Patiente…" : "Importer depuis Strava"}</button><button disabled={busy} onClick={() => strava("disconnect")}>Déconnecter Strava</button></> : <button className="primary strava-button" disabled={busy} onClick={() => strava("connect")}>Connect with Strava</button>}
-        <label className="file-button">Importer un fichier JSON<input type="file" accept="application/json,.json" disabled={busy} onChange={event => {const file = event.target.files?.[0]; event.target.value = ""; void importFile(file);}}/></label>
+      <div id="strava" tabIndex={-1}>
+        <div className="import-actions">
+          {connected ? <>
+            <button className="primary strava-button" disabled={busy} onClick={() => strava("sync")}>{busy ? "Patiente…" : "Importer depuis Strava"}</button>
+            <button disabled={busy} onClick={() => strava("disconnect")}>Déconnecter Strava</button>
+          </> : <>
+            <button className="primary strava-button" disabled={busy || !stravaStatus || !!stravaStatus.error} onClick={connectStrava}>
+              Connect with Strava
+            </button>
+            {stravaStatus?.defaultConfigured && !stravaStatus.error && <button disabled={busy} aria-expanded={showStravaSetup} onClick={() => setShowStravaSetup(!showStravaSetup)}>
+              {showStravaSetup ? "Masquer le formulaire Strava" : "Utiliser ma propre application Strava"}
+            </button>}
+          </>}
+          <label className="file-button">Importer un fichier JSON<input type="file" accept="application/json,.json" disabled={busy} onChange={event => {const file = event.target.files?.[0]; event.target.value = ""; void importFile(file);}}/></label>
+        </div>
+        {stravaStatus?.error && <p className="small" role="status">{stravaStatus.error}</p>}
+        {!connected && showStravaSetup && <form method="post" onSubmit={submitStravaSetup} aria-labelledby="strava-setup-title">
+          <h3 id="strava-setup-title">Configurer ma connexion Strava</h3>
+          <p className="small">Crée ou ouvre <a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer">ton application dans les paramètres Strava</a>. Indique <code>{stravaStatus?.callbackDomain}</code> comme domaine de rappel, puis copie les identifiants ci-dessous.</p>
+          <div className="fields">
+            <label>Client ID<input required name="clientId" inputMode="numeric" pattern="[0-9]+" maxLength={20}/></label>
+            <label>Client Secret<input required name="clientSecret" type="password" maxLength={256} autoComplete="off"/></label>
+          </div>
+          <button className="primary strava-button" disabled={busy}>{busy ? "Patiente…" : "Autoriser sur Strava"}</button>
+        </form>}
+        {stravaMessage && <p role="status" className="notice">{stravaMessage}</p>}
       </div>
       <p className="small">Strava : courses des 90 derniers jours, à la demande. Aucun envoi à une IA. <a href="/example-activities.json" download>Exemple de fichier JSON</a></p>
       <details><summary>Voir les dernières sorties</summary>{state.activities.length ? <ul className="activity-list">{state.activities.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(activity => <li key={activity.id}><time dateTime={activity.date}>{format(activity.date)}</time><span>{activity.distance.toFixed(1)} km</span><span>{Math.round(activity.minutes)} min</span><span>{Math.round(activity.elevation)} m D+</span></li>)}</ul> : <p>Aucune sortie importée pour le moment.</p>}</details>
