@@ -56,3 +56,33 @@
   .goal {margin: 20px 0; padding: 20px 16px;}
   .session {padding: 16px 12px;}
 }
+
+.activity-trends { margin-top: 28px; }
+.activity-trends h2 { margin-bottom: 12px; }
+.activity-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); gap: 12px; }
+.activity-chart { margin: 0; padding: 13px 14px 6px; border: 1px solid var(--line); background: white; border-radius: 10px; --chart-ink: #187566; }
+.activity-chart-elevation { --chart-ink: #9a4731; }
+.activity-chart-pace { --chart-ink: #395b97; }
+.activity-chart figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-weight: 700; }
+.activity-chart figcaption span { font-size: 13px; font-weight: 400; color: var(--muted); }
+.activity-chart svg { display: block; width: 100%; }
+.activity-chart svg text { font-size: 10px; fill: var(--muted); }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-mark { fill: var(--chart-ink); }
+.chart-line { fill: none; stroke: var(--chart-ink); stroke-width: 2.5; stroke-linejoin: round; }
+.chart-data { margin-top: 10px; }
+.run-detail-button { border: 0; padding: 0; border-radius: 2px; color: var(--green); font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+.activity-pager { justify-content: center; margin-top: 16px; }
+.activity-dialog { box-sizing: border-box; width: min(45rem, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: clamp(14px, 4vw, 26px); border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); }
+.activity-dialog::backdrop { background: rgb(12 26 24 / 52%); }
+.activity-dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.activity-dialog-heading .small { margin: 0 0 3px; }
+.activity-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0 20px; }
+.activity-metrics > div { border-top: 1px solid var(--line); padding-top: 8px; }
+.activity-metrics dt { font-size: 13px; color: var(--muted); }
+.activity-metrics dd { margin: 4px 0 0; font-weight: 700; }
+.route-map { position: relative; isolation: isolate; width: 100%; height: clamp(245px, 49vh, 450px); margin: 8px 0 2px; border: 1px solid var(--line); border-radius: 8px; background: #e9eeea; }
+.route-file-button { display: inline-block; }
+@media (max-width: 520px) {
+  .activity-metrics { grid-template-columns: repeat(2, 1fr); }
+}

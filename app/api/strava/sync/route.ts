@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isSameOrigin, noStore, readConnection, saveConnection, type StravaConnection } from "@/lib/browser-strava";
-import { activities, exchange, serverCredentials } from "@/lib/strava";
+import { isSameOrigin, noStore, readConnection, refreshStravaConnection, saveConnection, type StravaConnection } from "@/lib/browser-strava";
+import { activities } from "@/lib/strava";
 
 export const maxDuration = 60;
 
@@ -14,15 +14,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Connecte Strava avant l’import." }, { status: 409, headers: noStore });
   }
 
-  let refreshed: StravaConnection | undefined;
+  let refreshed: StravaConnection | null = null;
   let response: NextResponse;
   try {
-    if (connection.expires_at < Date.now() / 1000 + 120) {
-      const credentials = connection.credentials ?? serverCredentials();
-      if (!credentials) throw Error("Missing Strava credentials");
-      const tokens = await exchange({ grant_type: "refresh_token", refresh_token: connection.refresh_token }, credentials);
-      refreshed = { ...tokens, credentials: connection.credentials };
-    }
+    refreshed = await refreshStravaConnection(connection);
     response = NextResponse.json({ activities: await activities((refreshed ?? connection).access_token) }, { headers: noStore });
   } catch {
     response = NextResponse.json({

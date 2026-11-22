@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {statistics,formatPace,formatDuration} from "../lib/statistics";
+import {activityBuckets,statistics,formatPace,formatDuration} from "../lib/statistics";
 const run=(id:string,date:string,distance=10,minutes=60)=>({id,date,distance,minutes,elevation:100});
 test("period includes today and the first day, excludes older and future runs",()=>{
  const rows=[run("old","2026-10-11"),run("first","2026-10-12"),run("today","2026-10-18"),run("future","2026-10-19")];
@@ -20,4 +20,16 @@ test("empty history has no fabricated average and pace rounding carries minutes"
 });
 test("30-day window handles month boundaries",()=>{
  assert.equal(statistics([run("before","2026-09-18"),run("start","2026-09-19")],"30","2026-10-18").count,1);
+});
+
+test("les graphiques alignent les intervalles et pondèrent l’allure par la distance", () => {
+  const today = "2026-10-18";
+  const rows = [run("premier", "2026-10-12", 2, 20), run("même-jour", "2026-10-12", 8, 40), run("dernier", today), run("futur", "2026-10-19")];
+  const daily = activityBuckets(rows, "7", today);
+  assert.equal(daily.length, 7);
+  assert.deepEqual(daily[0], {start: "2026-10-12", end: "2026-10-12", distance: 10, elevation: 200, minutes: 60, pace: 6});
+  assert.equal(daily[1].pace, null);
+  assert.equal(daily.at(-1)?.distance, 10);
+  assert.equal(activityBuckets(rows, "30", today).reduce((sum, bucket) => sum + bucket.distance, 0), 20);
+  assert.ok(activityBuckets([...rows, run("ancien", "2005-08-08")], "all", today).length <= 12);
 });

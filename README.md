@@ -48,9 +48,11 @@ Le carnet privé ajoute une sauvegarde manuelle dans Supabase et une proposition
 
 ## Statistiques
 
-La navigation de gauche permet de passer du programme aux statistiques (sur mobile, elle est placée en haut). La page présente les kilomètres cumulés, le nombre de courses, la distance moyenne, l’allure moyenne, la durée et le dénivelé positif. Choisir les 7 ou 30 derniers jours (aujourd’hui inclus) ou tout l’historique importé. Les séances planifiées et les dates futures sont exclues.
+La navigation ouvre les statistiques sur 7 jours, 30 jours ou tout l’historique. Les graphiques affichent la distance, le dénivelé positif et l’allure moyenne par intervalle. L’allure est pondérée par la distance. Le tableau paginé donne accès à chaque course.
 
-L’allure globale est la durée cumulée divisée par la distance cumulée, et non la moyenne des allures de chaque sortie. Les 20 dernières courses de la période sont affichées avec leur date, distance, durée, allure et D+. Le nom Strava est conservé lors des nouveaux imports ; les anciennes activités sans nom restent compatibles et apparaissent comme « Sortie à pied ». Les chiffres reposent uniquement sur les activités disponibles dans le navigateur ; l’import Strava reste limité aux 90 derniers jours.
+Dans la fiche d’une course, le tracé GPS s’affiche sur OpenStreetMap si un enregistrement est disponible. MyTrainer demande le fichier FIT à Garmin, ou les coordonnées à Strava, à l’ouverture de la fiche et avec la connexion du navigateur. Pour une sortie sans tracé accessible, « Ouvrir un fichier GPX ou TCX » affiche un tracé lu dans le navigateur. Le tracé est conservé pendant l’affichage de la fiche.
+
+`NEXT_PUBLIC_MAP_TILE_URL` permet de choisir un autre fond de carte compatible avec la syntaxe `{z}/{x}/{y}`. Le fond par défaut utilise les tuiles OpenStreetMap et affiche leur attribution. Respecter les conditions d’utilisation du fournisseur de tuiles.
 
 ## Programme
 
