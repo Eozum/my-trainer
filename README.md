@@ -54,7 +54,9 @@ L’allure globale est la durée cumulée divisée par la distance cumulée, et 
 
 ## Programme
 
-Le moteur conserve les règles existantes : volume récent sur 28 jours, progression bornée, semaines allégées, affûtage et réduction après séances manquées. Les statuts explicites et l’ancrage du programme sont conservés. Ces heuristiques ne sont pas un modèle physiologique ; elles ne prennent pas en compte les blessures ou l’état de santé. Le détail des ajustements est disponible sous le programme, sans rubrique « coach ».
+Dans le formulaire de la course, choisir « Finir », « Progresser » ou « Viser un chrono », puis cliquer sur « Générer mon programme ». Les séances tiennent compte de la distance, du terrain, du dénivelé, du nombre de sorties souhaité, du volume des 28 derniers jours et des séances manquées. Le travail soutenu est réservé aux objectifs de progression ou de chrono quand le temps de préparation et le volume le permettent. Pour le chrono sur route, une allure est proposée sur les fractions spécifiques lorsqu’elle est cohérente avec les sorties récentes. Le volume s’allège avant la course et la veille est libre. Les données utilisées sont indiquées dans « Comprendre le programme ».
+
+Les statuts explicites et les séances déjà réalisées sont conservés. Les imports Garmin et Strava alimentent ce calcul dans le navigateur. « Recalculer mon programme » permet de revenir au programme par objectif après avoir validé une proposition du coach OpenAI.
 
 ## Vérifier
 
