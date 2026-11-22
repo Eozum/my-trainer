@@ -1,6 +1,6 @@
 # Adaptation OpenAI et carnet privé Supabase
 
-Cette fonctionnalité est facultative. Le programme local et l’import Strava continuent de fonctionner sans OpenAI ni Supabase. Le backend utilise l’API OpenAI, pas l’abonnement ChatGPT.
+Cette fonctionnalité est facultative. Le programme local et les imports Garmin et Strava continuent de fonctionner sans OpenAI ni Supabase. Le backend utilise l’API OpenAI, pas l’abonnement ChatGPT.
 
 ## Configuration
 
@@ -15,9 +15,9 @@ Cette fonctionnalité est facultative. Le programme local et l’import Strava c
 | `OPENAI_API_KEY` | Clé du projet API OpenAI avec facturation disponible |
 | `OPENAI_COACH_MODEL` | Modèle compatible Responses et Structured Outputs ; défaut `gpt-4.1-mini` |
 | `EOTRAINER_ACCESS_KEY` | Clé privée forte donnant accès au carnet personnel ; au moins 32 caractères |
-| `TOKEN_ENCRYPTION_KEY` | 32 octets hexadécimaux pour les cookies signés et les jetons Strava |
+| `TOKEN_ENCRYPTION_KEY` | 32 octets hexadécimaux pour les cookies signés et les jetons Strava et les clés Garmin |
 
-Générer **séparément** les deux dernières clés avec `openssl rand -hex 32`. Si `TOKEN_ENCRYPTION_KEY` est déjà configurée pour Strava, la conserver. Ne pas committer les valeurs ni les partager dans le chat. Ne jamais préfixer les secrets par `NEXT_PUBLIC_`. Redéployer après modification de la configuration. Si le réseau de l’environnement est restreint, autoriser `api.openai.com` et le domaine exact du projet Supabase.
+Générer **séparément** les deux dernières clés avec `openssl rand -hex 32`. Si `TOKEN_ENCRYPTION_KEY` est déjà configurée pour Garmin ou Strava, la conserver. Ne pas committer les valeurs ni les partager dans le chat. Ne jamais préfixer les secrets par `NEXT_PUBLIC_`. Redéployer après modification de la configuration. Si le réseau de l’environnement est restreint, autoriser `api.openai.com` et le domaine exact du projet Supabase.
 
 3. Dans « Adapter mes prochaines séances », ouvrir le carnet privé et saisir `EOTRAINER_ACCESS_KEY`. La clé n’est pas enregistrée en stockage local ; un cookie HttpOnly, Secure en production, SameSite Strict garde l’accès pendant sept jours. La rotation de la clé privée invalide les anciennes sessions.
 
@@ -37,7 +37,7 @@ Les données locales ne sont pas synchronisées automatiquement. Aucun cron ni i
 
 L’objectif numérique (distance, date, D+, terrain, volume déclaré, fréquence et intention), les totaux des activités admissibles sur 28 jours et le programme de référence des prochains jours. Ni noms d’activités/course, ni identifiants d’activités, ni notes libres, ni jetons ne sont envoyés. `store: false` est demandé à l’API ; cela ne remplace pas la vérification des conditions de traitement des données du fournisseur.
 
-Les imports identifiés par un identifiant `strava:` sont **exclus**, y compris du calcul du programme de référence transmis au modèle. Les autres activités importées doivent être des données dont l’usage avec cette API est autorisé. Un JSON d’origine inconnue ne peut pas être identifié automatiquement : ne pas renommer les identifiants Strava pour contourner cette exclusion. En l’absence d’historique admissible, le volume déclaré sert de référence. Avant toute prise en compte des données Strava par l’IA, vérifier les conditions Strava applicables ; cette PR ne l’active pas.
+Les imports portant un identifiant commençant par `strava:` ou `garmin:` sont **exclus**, y compris du calcul du programme de référence transmis au modèle. Les autres activités importées doivent être des données dont l’usage avec cette API est autorisé. Un JSON d’origine inconnue ne peut pas être identifié automatiquement : conserver leurs identifiants d’origine. En l’absence d’historique admissible, le volume déclaré sert de référence. Avant toute prise en compte de ces données par l’IA, vérifier les conditions applicables du fournisseur.
 
 ## Contrôles et limites
 

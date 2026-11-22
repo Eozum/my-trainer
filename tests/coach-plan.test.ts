@@ -8,12 +8,12 @@ const today="2026-10-18";
 const state:State={race:{name:"private race name",date:"2026-12-20",distance:21,elevation:500,terrain:"trail",goal:"finish",targetMinutes:150,weeklyKm:25,days:3},planStart:today,activities:[],sessions:[]};
 const id="00000000-0000-4000-8000-000000000001";
 const suggestion=(s=state)=>({explanation:"Garder de la régularité.",sessions:coachContext(s,today).targets.map(({date,kind,km,minutes,elevation,note})=>({date,kind,km,minutes,elevation,note}))});
-test("context excludes known Strava data, names and notes and restricts horizon",()=>{
- const input={...state,activities:[{id:"strava:secret-id",name:"secret Strava name",date:today,distance:90,minutes:600,elevation:5000},{id:"manual",name:"private name",date:today,distance:8,minutes:50,elevation:20}]};
+test("context excludes known Garmin and Strava data, names and notes and restricts horizon",()=>{
+ const input={...state,activities:[{id:"strava:secret-id",name:"secret Strava name",date:today,distance:90,minutes:600,elevation:5000},{id:"garmin:secret-id",name:"secret Garmin name",date:today,distance:55,minutes:350,elevation:2000},{id:"manual",name:"private name",date:today,distance:8,minutes:50,elevation:20}]};
  const context=coachContext(input,today);assert.equal(context.input.history.runs,1);assert.equal(context.input.history.km,8);
- const text=JSON.stringify(context.input);for(const name of ["private race name","secret Strava name","private name","strava:secret-id"])assert.ok(!text.includes(name));
+ const text=JSON.stringify(context.input);for(const name of ["private race name","secret Strava name","private name","strava:secret-id","garmin:secret-id","secret Garmin name"])assert.ok(!text.includes(name));
  assert.ok(context.targets.every(s=>s.date>today&&s.date<=addDays(today,14)&&s.date<state.race.date));
- assert.equal(JSON.stringify(coachContext({...input,activities:input.activities.slice(1)},today)),JSON.stringify(context));
+ assert.equal(JSON.stringify(coachContext({...input,activities:input.activities.slice(2)},today)),JSON.stringify(context));
 });
 test("validation rejects injected dates, duplicates, increased load and intensity",()=>{
  const base=suggestion();const targets=coachContext(state,today).targets;

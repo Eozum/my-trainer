@@ -1,6 +1,7 @@
 "use client";
 
 import Coach from "./components/coach";
+import Garmin from "./components/garmin";
 import Statistics from "./components/statistics";
 import {useEffect, useState, type FormEvent} from "react";
 import {addDays, day, defaultRace, stateSchema, type Race, type State} from "@/lib/model";
@@ -256,6 +257,7 @@ export default function Home() {
         {stravaMessage && <p role="status" className="notice">{stravaMessage}</p>}
       </div>
       <p className="small">Strava : courses des 90 derniers jours, à la demande. Aucun envoi à une IA. <a href="/example-activities.json" download>Exemple de fichier JSON</a></p>
+      <Garmin busy={busy} onBusy={setBusy} onImport={activities => save(importActivities(state, activities))}/>
       <details><summary>Voir les dernières sorties</summary>{state.activities.length ? <ul className="activity-list">{state.activities.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(activity => <li key={activity.id}><time dateTime={activity.date}>{format(activity.date)}</time><span>{activity.distance.toFixed(1)} km</span><span>{Math.round(activity.minutes)} min</span><span>{Math.round(activity.elevation)} m D+</span></li>)}</ul> : <p>Aucune sortie importée pour le moment.</p>}</details>
     </section>
     </div>}
