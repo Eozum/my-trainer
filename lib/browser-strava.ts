@@ -3,7 +3,7 @@ import { z } from "zod";
 import { appOrigin } from "./browser-origin";
 export { isSameOrigin, noStore } from "./browser-origin";
 import { encrypt, decrypt, hasEncryptionKey } from "./vault";
-import { credentialsSchema, tokenSchema } from "./strava";
+import { credentialsSchema, exchange, serverCredentials, tokenSchema } from "./strava";
 
 const connectionCookie = "eotrainer_strava";
 const flowCookie = "strava_oauth";
@@ -68,3 +68,11 @@ export function clearFlow(response: NextResponse) {
   response.cookies.set(flowCookie, "", {...options, maxAge: 0});
 }
 
+
+export async function refreshStravaConnection(connection: StravaConnection) {
+  if (connection.expires_at >= Date.now() / 1000 + 120) return null;
+  const credentials = connection.credentials ?? serverCredentials();
+  if (!credentials) throw Error("Missing Strava credentials");
+  const tokens = await exchange({ grant_type: "refresh_token", refresh_token: connection.refresh_token }, credentials);
+  return { ...tokens, credentials: connection.credentials };
+}
