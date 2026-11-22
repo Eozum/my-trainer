@@ -21,8 +21,9 @@ export function stateHash(state: State) {
 }
 
 export function coachContext(state: State, today = day()) {
-  // Exclude known Strava activities from both history totals and reference volume.
-  const activities = state.activities.filter(a => !a.id.startsWith("strava:") && a.date >= addDays(today, -28) && a.date <= today);
+  // Keep provider data out of the OpenAI history and reference volume.
+  const activities = state.activities.filter(a => !a.id.startsWith("strava:") && !a.id.startsWith("garmin:")
+    && a.date >= addDays(today, -28) && a.date <= today);
   const safeState: State = {
     race: state.race, planStart: state.planStart, activities,
     sessions: state.sessions.filter(s => s.status === "missed" || (s.status === "planned" && s.date < today)),

@@ -1,5 +1,7 @@
 import { type NextRequest, type NextResponse } from "next/server";
 import { z } from "zod";
+import { appOrigin } from "./browser-origin";
+export { isSameOrigin, noStore } from "./browser-origin";
 import { encrypt, decrypt, hasEncryptionKey } from "./vault";
 import { credentialsSchema, tokenSchema } from "./strava";
 
@@ -22,27 +24,11 @@ const flowSchema = z.object({
 
 export type StravaConnection = z.infer<typeof connectionSchema>;
 
-export function stravaOrigin() {
-  const { APP_URL, VERCEL_PROJECT_PRODUCTION_URL } = process.env;
-  const value = APP_URL || (VERCEL_PROJECT_PRODUCTION_URL && `https://${VERCEL_PROJECT_PRODUCTION_URL}`);
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol === "https:") return url.origin;
-    if (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)) return url.origin;
-  } catch {}
-  return null;
-}
-
 export function stravaConfiguration() {
-  const origin = stravaOrigin();
+  const origin = appOrigin();
   if (!origin) return { error: "L’adresse de MyTrainer n’est pas configurée sur le serveur (APP_URL)." } as const;
   if (!hasEncryptionKey()) return { error: "La clé de chiffrement du serveur (TOKEN_ENCRYPTION_KEY) est absente ou invalide." } as const;
   return { origin } as const;
-}
-
-export function isSameOrigin(req: Request, origin = stravaOrigin()) {
-  return origin !== null && req.headers.get("origin") === origin;
 }
 
 export function readConnection(req: NextRequest) {
@@ -82,4 +68,3 @@ export function clearFlow(response: NextResponse) {
   response.cookies.set(flowCookie, "", {...options, maxAge: 0});
 }
 
-export const noStore = { "Cache-Control": "no-store" };

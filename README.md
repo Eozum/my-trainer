@@ -13,6 +13,16 @@ pnpm dev
 
 Le programme et l’import JSON fonctionnent sans configuration serveur. La course et l’historique sont enregistrés dans le stockage local du navigateur. Par défaut, il n’y a pas de sauvegarde cloud ni de transfert entre appareils. Le carnet privé facultatif ajoute une sauvegarde/restauration manuelle ; aucune tâche en arrière-plan n’est exécutée. Le programme déterministe est recalculé à l’ouverture et à chaque modification/import ; un programme IA approuvé reste conservé jusqu’à son adaptation explicite. Effacer le stockage du navigateur efface sa copie locale. En navigation privée, il peut disparaître à la fermeture.
 
+## Connecter Garmin (facultatif)
+
+1. Générer une [clé API personnelle Garmin Connect](https://connect.garmin.com/app/settings/personalApiToken) pour son propre compte.
+2. Dans « Mes sorties », choisir « Connecter Garmin », saisir la clé et enregistrer la connexion.
+3. Cliquer sur « Importer depuis Garmin » pour récupérer les courses des 90 derniers jours. Les sorties sont intégrées au carnet et les imports répétés de la même activité Garmin sont dédupliqués.
+
+La clé personnelle est validée auprès de Garmin, puis chiffrée dans un cookie HttpOnly lié au navigateur. MyTrainer obtient un jeton auprès de Garmin à chaque import. En cas d’expiration, générer une nouvelle clé dans Garmin Connect et utiliser « Modifier la clé Garmin ». « Déconnecter Garmin » efface la clé de ce navigateur.
+
+Le serveur utilise `TOKEN_ENCRYPTION_KEY` et l’origine configurée par `APP_URL` ou, en son absence, le domaine de production Vercel. Conserver la clé de chiffrement existante si elle est déjà configurée. Les activités Garmin servent au programme local et aux statistiques. Le coach OpenAI exclut ces imports. Les activités déjà importées depuis Strava ont des identifiants distincts et peuvent apparaître deux fois si la même sortie est importée depuis les deux services.
+
 ## Connecter Strava (facultatif)
 
 1. Créer ou ouvrir une application dans les [paramètres API Strava](https://www.strava.com/settings/api).
@@ -26,7 +36,7 @@ L’import récupère les courses Run/TrailRun/VirtualRun des 90 derniers jours.
 
 Les jetons Strava et les identifiants renseignés dans l’interface sont chiffrés côté serveur dans un cookie HttpOnly, SameSite=Lax, Secure en production. Ils ne sont pas accessibles au JavaScript du navigateur, ni placés dans le stockage local. Les routes d’écriture contrôlent l’origine de la requête ; les jetons expirés sont renouvelés côté serveur avec les identifiants de la connexion. Cette connexion est propre au navigateur, pas un compte EoTrainer. Un changement de clé de chiffrement nécessite une reconnexion. Déconnecter supprime le cookie ; révoquer complètement l’autorisation dans les paramètres Strava si souhaité.
 
-Pour les activités Garmin, activer la synchronisation Garmin Connect → Strava. Ni accès partenaire Garmin ni MCP ne sont nécessaires. L’import Strava n’effectue aucun appel OpenAI ; les activités identifiées Strava sont exclues de la fonctionnalité IA facultative. Vérifier les conditions et règles de marque Strava avant publication, et particulièrement avant toute future utilisation des données avec une IA.
+L’import Strava n’effectue aucun appel OpenAI ; les activités identifiées Strava sont exclues de la fonctionnalité IA facultative. Vérifier les conditions et règles de marque Strava avant publication, et particulièrement avant toute future utilisation des données avec une IA.
 
 ## Depuis l’ancienne version
 
@@ -34,7 +44,7 @@ Cette version ne demande plus de compte Supabase et ne lit plus les anciennes ta
 
 ## Adapter le programme avec OpenAI (facultatif)
 
-Le carnet privé ajoute une sauvegarde manuelle dans Supabase et une proposition IA des 14 prochains jours, à prévisualiser puis appliquer. Aucun compte à créer : l’accès est protégé par une clé privée propre à cette installation personnelle. Les données identifiées comme Strava ne sont pas envoyées à OpenAI. Voir [la configuration et le fonctionnement](docs/coach.md) pour la migration SQL et les variables serveur.
+Le carnet privé ajoute une sauvegarde manuelle dans Supabase et une proposition IA des 14 prochains jours, à prévisualiser puis appliquer. Aucun compte à créer : l’accès est protégé par une clé privée propre à cette installation personnelle. Les activités identifiées comme Garmin ou Strava sont exclues de l’envoi à OpenAI. Voir [la configuration et le fonctionnement](docs/coach.md) pour la migration SQL et les variables serveur.
 
 ## Statistiques
 
@@ -54,6 +64,6 @@ pnpm typecheck
 pnpm build
 ```
 
-Recette navigateur : modifier une course, recharger et retrouver le programme ; importer deux fois le même JSON sans doublon ; modifier un statut ; tester sur mobile. Avec les clés Strava réelles : connexion/refus, import, renouvellement du jeton et déconnexion. Les tests automatisés couvrent le moteur, le stockage normalisé, les imports et le protocole Strava avec réponses simulées ; ils ne prouvent pas une connexion réelle à Strava.
+Recette navigateur : modifier une course, recharger et retrouver le programme ; importer deux fois le même JSON sans doublon ; modifier un statut ; tester sur mobile. Avec les clés Strava réelles : connexion/refus, import, renouvellement du jeton et déconnexion. Les tests automatisés couvrent le moteur, le stockage normalisé, les imports et les protocoles Garmin et Strava avec réponses simulées. Un essai avec tes comptes reste nécessaire pour vérifier l’autorisation et l’import réels.
 
 Déploiement Vercel : framework Next.js, Node 24, `pnpm install --frozen-lockfile`, `pnpm build`. Supabase n’est requis que pour le carnet privé et la fonctionnalité IA facultative.

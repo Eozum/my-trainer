@@ -73,7 +73,7 @@ export default function Coach({state, disabled, onBusy, onState}: Props) {
         })}>Sauvegarder ce carnet</button>
         <button disabled={busy} onClick={() => void run(async () => {await request("access", "DELETE"); setUnlocked(false); setRevision(null); setBackup(null); setProposal(null);})}>Verrouiller</button>
       </div>
-      <p className="small">L’adaptation sauvegarde d’abord ce carnet en ligne, puis envoie à OpenAI l’objectif et un résumé des sorties hors Strava. Les imports identifiés Strava, les noms de courses et les notes ne sont pas envoyés. Les jours restent fixes et le volume ne peut pas dépasser la référence calculée.</p>
+      <p className="small">L’adaptation sauvegarde d’abord ce carnet en ligne, puis envoie à OpenAI l’objectif et un résumé des sorties. Les imports identifiés Garmin ou Strava, les noms de courses et les notes sont exclus de cet envoi. Les jours restent fixes et le volume ne peut pas dépasser la référence calculée.</p>
       <button className="primary" disabled={busy || revision === null} onClick={() => void run(async () => {
         setProposal(null);
         const snapshot = current.current;
